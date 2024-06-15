@@ -1,0 +1,9 @@
+
+services:
+  app:
+    build: .
+    ports:
+      - "5369:5369"
+    volumes:
+      - .:/usr/src/app
+    command: npm start
