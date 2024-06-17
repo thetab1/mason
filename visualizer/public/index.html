@@ -1,10 +1,10 @@
-<!-- index.html -->
+<!-- public/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js Cube</title>
+    <title>Three.js SCARA Robot Arm</title>
     <style>
         body { margin: 0; }
         canvas { display: block; }
@@ -14,42 +14,109 @@
     <script type="module">
         import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.151.3/build/three.module.js';
 
-        let scene, camera, renderer, cube;
+        let scene, camera, renderer, column, elbowArm, forearm;
+        let elbowArmPosition = 0;
+        let forearmRotation = 0;
+        let columnRotation = 0;
+        let direction = 1;
+        let rotationDirection = 1;
+        let columnSwingDirection = 1;
+
+        // Configurable parameters
+        const columnHeight = 10;
+        const elbowArmLength = 6;
+        const forearmLength = 6;
+        const columnSwingLimit = Math.PI / 4;
+        const elbowArmMovementLimit = columnHeight / 2 - 1.5;
+        const forearmRotationLimit = Math.PI / 4;
 
         function init() {
+            // Create the scene
             scene = new THREE.Scene();
 
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = 5;
+            // Set up the camera for isometric view
+            const aspect = window.innerWidth / window.innerHeight;
+            const d = 20;
+            camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+            camera.position.set(10, 10, 10); // Position the camera for isometric view
+            camera.lookAt(new THREE.Vector3(0, 0, 0)); // Look at the center of the scene
 
+            // Set up the renderer
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            const geometry = new THREE.BoxGeometry();
-            const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-            cube = new THREE.Mesh(geometry, material);
+            // Create the column (shoulder)
+            const columnGeometry = new THREE.BoxGeometry(1, columnHeight, 1);
+            const columnMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            column = new THREE.Mesh(columnGeometry, columnMaterial);
+            column.position.y = columnHeight / 2; // Position the column to stand on the ground
+            scene.add(column);
 
-            scene.add(cube);
+            // Create the elbow arm
+            const elbowArmGeometry = new THREE.BoxGeometry(elbowArmLength, 1, 1);
+            const elbowArmMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+            elbowArm = new THREE.Mesh(elbowArmGeometry, elbowArmMaterial);
+            elbowArm.position.y = -columnHeight / 2 + 0.5; // Starting position at the bottom of the column
+            elbowArm.position.x = elbowArmLength / 2; // Connect the elbow arm to the column on one end
+            column.add(elbowArm);
 
+            // Create the forearm
+            const forearmGeometry = new THREE.BoxGeometry(forearmLength, 1, 1);
+            const forearmMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            forearm = new THREE.Mesh(forearmGeometry, forearmMaterial);
+            forearm.position.x = elbowArmLength / 2; // Position the forearm at the end of the elbow arm
+            elbowArm.add(forearm);
+
+            // Create a pivot point for the forearm at its connection point with the elbow arm
+            const pivot = new THREE.Group();
+            pivot.position.x = elbowArmLength / 2; // Position the pivot at the end of the elbow arm
+            elbowArm.add(pivot);
+            pivot.add(forearm); // Add the forearm to the pivot
+
+            // Start the animation
             animate();
         }
 
         function animate() {
             requestAnimationFrame(animate);
 
-            cube.rotation.x += 0.01;
-            cube.rotation.y += 0.01;
+            // Swing the column around its longitudinal (y) axis
+            columnRotation += 0.01 * columnSwingDirection;
+            if (columnRotation > columnSwingLimit || columnRotation < -columnSwingLimit) {
+                columnSwingDirection *= -1;
+            }
+            column.rotation.y = columnRotation;
 
+            // Move the elbow arm up and down the column
+            elbowArmPosition += 0.05 * direction;
+            if (elbowArmPosition > elbowArmMovementLimit || elbowArmPosition < -elbowArmMovementLimit) {
+                direction *= -1;
+            }
+            elbowArm.position.y = elbowArmPosition;
+
+            // Rotate the forearm around the pivot (yaw axis)
+            forearmRotation += 0.02 * rotationDirection;
+            if (forearmRotation > forearmRotationLimit || forearmRotation < -forearmRotationLimit) {
+                rotationDirection *= -1;
+            }
+            forearm.parent.rotation.y = forearmRotation;
+
+            // Render the scene
             renderer.render(scene, camera);
         }
 
         window.addEventListener('resize', () => {
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            camera.aspect = window.innerWidth / window.innerHeight;
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.left = -20 * aspect;
+            camera.right = 20 * aspect;
+            camera.top = 20;
+            camera.bottom = -20;
             camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
+        // Initialize the scene
         init();
     </script>
 </body>
