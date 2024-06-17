@@ -11,10 +11,32 @@
     </style>
 </head>
 <body>
+    <div class="controls">
+        <label>
+            Column Swing Angle:
+            <input id="columnSwing" type="range" min="-90" max="90" value="0" step="1">
+        </label>
+        <label>
+            Elbow Swing Angle:
+            <input id="elbowSwing" type="range" min="-90" max="90" value="0" step="1">
+        </label>
+        <label>
+            Elbow Vertical Position:
+            <input id="elbowPosition" type="range" min="-5" max="5" value="0" step="0.1">
+        </label>
+        <label>
+            Wrist Swing Angle:
+            <input id="wristSwing" type="range" min="-90" max="90" value="0" step="1">
+        </label>
+        <label>
+            End effector position:
+            <input id="endEffectorPosition" type="range" min="0" max="3" value="0" step="0.1">
+        </label>
+    </div>
     <script type="module">
         import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.151.3/build/three.module.js';
 
-        let scene, camera, renderer, column, elbowArm, forearm;
+        let scene, camera, renderer, column, elbowArm, forearm, hand, endEffector;
         let elbowArmPosition = 0;
         let forearmRotation = 0;
         let columnRotation = 0;
@@ -23,9 +45,10 @@
         let columnSwingDirection = 1;
 
         // Configurable parameters
-        const columnHeight = 10;
+        const columnHeight = 20;
         const elbowArmLength = 6;
         const forearmLength = 6;
+        const handLength = 3;
         const columnSwingLimit = Math.PI / 4;
         const elbowArmMovementLimit = columnHeight / 2 - 1.5;
         const forearmRotationLimit = Math.PI / 4;
@@ -74,6 +97,28 @@
             elbowArm.add(pivot);
             pivot.add(forearm); // Add the forearm to the pivot
 
+            // create the hand
+            const handGeometry = new THREE.BoxGeometry(1, handLength, 1);
+            const handMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+            hand = new THREE.Mesh(handGeometry, handMaterial);
+            hand.position.x = 0; // Position the hand at the end of the forearm
+            hand.position.y = -handLength / 2; // Position the hand to stand on the ground
+            forearm.add(hand);
+
+            // create a pivot point for the hand at its connection point with the forearm
+            const handPivot = new THREE.Group();
+            handPivot.position.x = forearmLength / 2; // Position the pivot at the end of the forearm
+            forearm.add(handPivot);
+            handPivot.add(hand); // Add the hand to the pivot
+
+            // end effector
+            const endEffectorGeometry = new THREE.BoxGeometry(2, 1, 1);
+            const endEffectorMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            endEffector = new THREE.Mesh(endEffectorGeometry, endEffectorMaterial);
+            endEffector.position.x = handLength / 2; // Position the end effector at the end of the hand
+            endEffector.position.y = -handLength / 2;
+            hand.add(endEffector);
+
             // Start the animation
             animate();
         }
@@ -82,25 +127,18 @@
             requestAnimationFrame(animate);
 
             // Swing the column around its longitudinal (y) axis
-            columnRotation += 0.01 * columnSwingDirection;
-            if (columnRotation > columnSwingLimit || columnRotation < -columnSwingLimit) {
-                columnSwingDirection *= -1;
-            }
-            column.rotation.y = columnRotation;
-
-            // Move the elbow arm up and down the column
-            elbowArmPosition += 0.05 * direction;
-            if (elbowArmPosition > elbowArmMovementLimit || elbowArmPosition < -elbowArmMovementLimit) {
-                direction *= -1;
-            }
-            elbowArm.position.y = elbowArmPosition;
-
-            // Rotate the forearm around the pivot (yaw axis)
-            forearmRotation += 0.02 * rotationDirection;
-            if (forearmRotation > forearmRotationLimit || forearmRotation < -forearmRotationLimit) {
-                rotationDirection *= -1;
-            }
-            forearm.parent.rotation.y = forearmRotation;
+            const columnSwing = document.getElementById('columnSwing').value;
+            const elbowSwing = document.getElementById('elbowSwing').value;
+            const elbowPosition = document.getElementById('elbowPosition').value;
+            const wristSwing = document.getElementById('wristSwing').value;
+            const endEffectorPosition = document.getElementById('endEffectorPosition').value;
+            
+            column.rotation.y = THREE.MathUtils.degToRad(columnSwing);
+            elbowArm.position.y = parseFloat(elbowPosition);
+            forearm.parent.rotation.y = THREE.MathUtils.degToRad(elbowSwing);
+            hand.parent.rotation.y = THREE.MathUtils.degToRad(wristSwing);
+            endEffector.position.x = parseFloat(endEffectorPosition);
+            
 
             // Render the scene
             renderer.render(scene, camera);
