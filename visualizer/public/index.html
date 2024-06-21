@@ -21,7 +21,7 @@
             <input id="elbowSwing" type="range" min="-90" max="90" value="0" step="1">
         </label>
         <label>
-            Elbow Vertical Position:
+            Arm Vertical Position:
             <input id="elbowPosition" type="range" min="-5" max="5" value="0" step="0.1">
         </label>
         <label>
@@ -45,7 +45,7 @@
         let columnSwingDirection = 1;
 
         // Configurable parameters
-        const columnHeight = 20;
+        const columnHeight = 15;
         const elbowArmLength = 6;
         const forearmLength = 6;
         const handLength = 3;
@@ -89,6 +89,7 @@
             const forearmMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
             forearm = new THREE.Mesh(forearmGeometry, forearmMaterial);
             forearm.position.x = elbowArmLength / 2; // Position the forearm at the end of the elbow arm
+            forearm.position.y = -1; // Position the forearm to stand on the ground
             elbowArm.add(forearm);
 
             // Create a pivot point for the forearm at its connection point with the elbow arm
